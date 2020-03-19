@@ -1,55 +1,85 @@
 <template>
   <div id="app">
     <div>
-      <span :style="{ color: 'red' }">{{ error }}</span>
-      <figure class="dog" @dblclick="fetchDog">
-        <img v-if="dog" :src="dog" alt="doggo" />
+      <span :style="{ color: 'red' }">{{ state.context.error }}</span>
+      <figure class="dog" @dblclick="send('FETCH')">
+        <img v-if="state.context.dog" :src="state.context.dog" alt="doggo" />
       </figure>
       <div class="actions">
-        <button @click="fetchDog()" :disabled="isLoading">
-          {{ isLoading ? "Fetching..." : "Fetch dog!" }}
+        <button @click="send('FETCH')">
+          {{ state.matches("loading") ? "Fetching..." : "" }}
+          {{ state.matches("success") ? "Fetch another dog!" : "" }}
+          {{ state.matches("idle") ? "Fetch dog" : "" }}
+          {{ state.matches("failure") ? "Try again" : "" }}
         </button>
-        <button @click="cancel">Cancel</button>
+        <button @click="send('CANCEL')">Cancel</button>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { ref, defineComponent } from "@vue/composition-api";
+import { defineComponent } from "@vue/composition-api";
+import { useMachine } from "@xstate/vue";
+import { Machine, assign } from "xstate";
+
+const fetchRandomDog = function() {
+  return new Promise((res, rej) => {
+    setTimeout(() => {
+      const fail = Math.random() < 0.1;
+
+      if (fail) {
+        rej("Failed");
+      } else {
+        fetch(`https://dog.ceo/api/breeds/image/random`)
+          .then(data => data.json())
+          .then(data => {
+            console.log(data);
+            res(data);
+          });
+      }
+    }, 1000);
+  });
+};
+
+const dogFetcherMachine = Machine({
+  id: "dog fetcher",
+  initial: "idle",
+  context: {
+    dog: null,
+    error: null
+  },
+  states: {
+    idle: {
+      on: { FETCH: "loading" }
+    },
+    loading: {
+      invoke: {
+        src: () => fetchRandomDog(),
+        onDone: {
+          target: "success",
+          actions: assign({ dog: (_, event) => event.data.message })
+        },
+        onError: {
+          target: "failure",
+          actions: assign({ error: (_, event) => event.data })
+        }
+      },
+      on: { CANCEL: "idle" }
+    },
+    success: {
+      on: { FETCH: "loading" }
+    },
+    failure: {
+      on: { FETCH: "loading" }
+    }
+  }
+});
 
 export default defineComponent({
   setup() {
-    const isLoading = ref(false);
-    const error = ref(null);
-    const canceled = ref(false);
-    const dog = ref(null);
-
-    function fetchDog() {
-      if (isLoading.value) return;
-      canceled.value = false;
-      error.value = null;
-      isLoading.value = true;
-      fetch("https://dog.ceo/api/breeds/image/random")
-        .then(data => data.json())
-        .then(response => {
-          isLoading.value = false;
-          if (canceled.value) return;
-          dog.value = response.message;
-        })
-        .catch(error => {
-          isLoading.value = false;
-          canceled.value = false;
-          error.value = error;
-        });
-    }
-
-    function cancel() {
-      isLoading.value = false;
-      canceled.value = true;
-    }
-
-    return { isLoading, dog, fetchDog, error, cancel };
+    const { state, send } = useMachine(dogFetcherMachine);
+    return { state, send };
   }
 });
 </script>
