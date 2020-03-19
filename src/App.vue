@@ -33,8 +33,8 @@ export default defineComponent({
       fetch("https://dog.ceo/api/breeds/image/random")
         .then(data => data.json())
         .then(response => {
-          if (canceled.value) return;
           isLoading.value = false;
+          if (canceled.value) return;
           dog.value = response.message;
         })
         .catch(error => {
