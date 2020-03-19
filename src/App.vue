@@ -1,12 +1,16 @@
 <template>
   <div id="app">
     <div>
-      <figure class="dog">
+      <span :style="{ color: 'red' }">{{ error }}</span>
+      <figure class="dog" @dblclick="fetchDog">
         <img v-if="dog" :src="dog" alt="doggo" />
       </figure>
-      <button @click="fetchDog()" :disabled="isLoading">
-        {{ isLoading ? "Fetching..." : "Fetch dog!" }}
-      </button>
+      <div class="actions">
+        <button @click="fetchDog()" :disabled="isLoading">
+          {{ isLoading ? "Fetching..." : "Fetch dog!" }}
+        </button>
+        <button @click="cancel">Cancel</button>
+      </div>
     </div>
   </div>
 </template>
@@ -17,19 +21,35 @@ import { ref, defineComponent } from "@vue/composition-api";
 export default defineComponent({
   setup() {
     const isLoading = ref(false);
+    const error = ref(null);
+    const canceled = ref(false);
     const dog = ref(null);
 
     function fetchDog() {
+      if (isLoading.value) return;
+      canceled.value = false;
+      error.value = null;
       isLoading.value = true;
       fetch("https://dog.ceo/api/breeds/image/random")
         .then(data => data.json())
         .then(response => {
-          dog.value = response.message;
+          if (canceled.value) return;
           isLoading.value = false;
+          dog.value = response.message;
+        })
+        .catch(error => {
+          isLoading.value = false;
+          canceled.value = false;
+          error.value = error;
         });
     }
 
-    return { isLoading, dog, fetchDog };
+    function cancel() {
+      isLoading.value = false;
+      canceled.value = true;
+    }
+
+    return { isLoading, dog, fetchDog, error, cancel };
   }
 });
 </script>
@@ -86,5 +106,10 @@ figure {
   border-radius: 1rem;
   border: 1px solid #aaa;
   cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-around;
 }
 </style>
