@@ -1,29 +1,37 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png" />
-    <HelloWorld msg="Welcome to Your Vue.js + TypeScript App" />
+    <div>
+      <figure className="dog">
+        <img v-if="dog" :src="dog" alt="doggo" />
+      </figure>
+      <button @click="fetchDog()">
+        {{ isLoading ? "Fetching..." : "Fetch dog!" }}
+      </button>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import Vue from "vue";
-import HelloWorld from "./components/HelloWorld.vue";
+import { ref, defineComponent } from "@vue/composition-api";
 
-export default Vue.extend({
-  name: "App",
-  components: {
-    HelloWorld
+export default defineComponent({
+  setup() {
+    const isLoading = ref(false);
+    const dog = ref(null);
+
+    function fetchDog() {
+      isLoading.value = true;
+      fetch("https://dog.ceo/api/breeds/image/random")
+        .then(data => data.json())
+        .then(response => {
+          dog.value = response.message;
+          isLoading.value = false;
+        });
+    }
+
+    return { isLoading, dog, fetchDog };
   }
 });
 </script>
 
-<style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
+<style lang="scss"></style>
