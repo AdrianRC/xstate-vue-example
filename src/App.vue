@@ -4,7 +4,7 @@
       <figure class="dog">
         <img v-if="dog" :src="dog" alt="doggo" />
       </figure>
-      <button @click="fetchDog()">
+      <button @click="fetchDog()" :disabled="isLoading">
         {{ isLoading ? "Fetching..." : "Fetch dog!" }}
       </button>
     </div>
